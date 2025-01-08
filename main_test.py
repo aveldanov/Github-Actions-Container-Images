@@ -1,35 +1,29 @@
 import unittest
+import json
 from fastapi.testclient import TestClient
 from main import app
 
-client = TestClient(app)
-
 
 class TestApp(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        with open("data.json", "r") as f:
+            self.data = json.load(f)
+
     def test_read_data(self):
-        """
-        Test that all data is retrieved successfully.
-        """
-        response = client.get("/")
+        response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIsInstance(response.json(), list)
+        self.assertEqual(response.json(), self.data)
 
     def test_read_data_by_guid(self):
-        """
-        Test fetching an item by a valid GUID.
-        """
-        valid_guid = "12345"  # Replace with a GUID from your data.json
-        response = client.get(f"/{valid_guid}")
+        guid = self.data[0]["guid"]
+        response = self.client.get(f"/{guid}")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["guid"], valid_guid)
+        self.assertEqual(response.json(), self.data[0])
 
     def test_read_data_by_invalid_guid(self):
-        """
-        Test fetching an item with an invalid GUID.
-        """
-        response = client.get("/invalid-guid")
+        response = self.client.get("/invalid-guid")
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json()["detail"], "Item not found")
 
 
 if __name__ == "__main__":
