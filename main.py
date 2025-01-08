@@ -1,37 +1,20 @@
-from fastapi import FastAPI, HTTPException
-import json
-from typing import List
+from fastapi.testclient import TestClient  # Correct import for FastAPI
+from main import app
 
-app = FastAPI()
+client = TestClient(app)
 
-# Load data from data.json
-try:
-    with open("data.json", "r") as file:
-        data = json.load(file)
-except FileNotFoundError:
-    data = []  # Use an empty list if file is missing
-    print("Warning: 'data.json' file not found.")
-except json.JSONDecodeError:
-    data = []  # Use an empty list if file contains invalid JSON
-    print("Warning: 'data.json' contains invalid JSON.")
+def test_read_data():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
 
+def test_read_data_by_guid():
+    valid_guid = "12345"  # Replace with a valid GUID from your `data.json`
+    response = client.get(f"/{valid_guid}")
+    assert response.status_code == 200
+    assert response.json()["guid"] == valid_guid
 
-@app.get("/", response_model=List[dict])
-async def read_data():
-    """
-    Return all available data.
-    """
-    if not data:
-        raise HTTPException(status_code=404, detail="Data not available")
-    return data
-
-
-@app.get("/{guid}", response_model=dict)
-async def read_data_by_guid(guid: str):
-    """
-    Return a specific item by its GUID.
-    """
-    for item in data:
-        if item.get("guid") == guid:
-            return item
-    raise HTTPException(status_code=404, detail="Item not found")
+def test_read_data_by_invalid_guid():
+    response = client.get("/invalid-guid")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Item not found"
